@@ -1,0 +1,1775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Business Management System</title>
+<meta name="description" content="Full business and accounting management system with dashboard, clients, suppliers, purchases, sales, accounting, payments, and financial reports." />
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Poppins font -->
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+<!-- Heroicons CDN -->
+<script src="https://unpkg.com/feather-icons"></script>
+<!-- SheetJS for Excel export -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- jsPDF for PDF export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  /* Base font and background */
+  body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #ffffff;
+    color: #374151; /* neutral gray */
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 24px;
+  }
+  /* Sidebar styles */
+  #sidebar {
+    transition: transform 0.3s ease;
+    background: #f9fafb;
+    box-shadow: 1px 0 10px rgba(0,0,0,0.05);
+  }
+  #sidebar.collapsed {
+    transform: translateX(-100%);
+  }
+  /* Sidebar toggle button */
+  #sidebarToggle {
+    transition: transform 0.2s ease;
+  }
+  #sidebarToggle:hover {
+    transform: scale(1.1);
+  }
+  /* Navigation link styles */
+  nav a {
+    transition: background-color 0.2s, color 0.2s;
+  }
+  nav a:hover, nav a.active {
+    background-color: #e0e7ff;
+    color: #4338ca;
+    font-weight: 600;
+  }
+  /* Cards */
+  .card {
+    background: #ffffff;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
+    padding: 1.5rem;
+  }
+  /* Form input */
+  input, select, textarea {
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #4338ca;
+    box-shadow: 0 0 0 2px #c7d2fe;
+  }
+  /* Buttons variants */
+  .btn {
+    font-weight: 600;
+    border-radius: 0.5rem;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    cursor: pointer;
+  }
+  .btn-primary {
+    background-color: #4338ca;
+    color: white;
+  }
+  .btn-primary:hover {
+    background-color: #6366f1;
+    transform: scale(1.05);
+  }
+  .btn-secondary {
+    background-color: #e0e7ff;
+    color: #4338ca;
+  }
+  .btn-secondary:hover {
+    background-color: #c7d2fe;
+    transform: scale(1.05);
+  }
+  .btn-ghost {
+    background-color: transparent;
+    color: #4338ca;
+  }
+  .btn-ghost:hover {
+    background-color: #f3f4f6;
+    transform: scale(1.05);
+  }
+  /* Table hover & layout */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  th, td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  tbody tr:hover {
+    background-color: #f9fafb;
+  }
+  /* Scroll on small tables */
+  .table-container {
+    overflow-x: auto;
+  }
+  /* Modal background */
+  .modal-bg {
+    background: rgba(0,0,0,0.4);
+  }
+</style>
+</head>
+<body class="flex flex-col min-h-screen">
+  <!-- Header -->
+  <header class="flex items-center justify-between p-4 border-b border-gray-200 sticky top-0 bg-white z-20">
+    <div class="flex items-center space-x-3">
+      <button id="sidebarToggle" aria-label="Toggle sidebar" class="text-gray-600 hover:text-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-md">
+        <!-- hamburger icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+      </button>
+      <h1 class="text-2xl font-semibold text-indigo-700 select-none">Business Manager</h1>
+    </div>
+    <nav class="flex space-x-6 text-indigo-600 font-medium text-sm">
+      <button id="exportExcel" class="btn btn-ghost" aria-label="Export current report to Excel" title="Export to Excel">
+        <svg xmlns="http://www.w3.org/2000/svg" class="inline h-5 w-5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M9 17v-6h13v6M5 17V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z"></path><path d="M7 7v10"></path><path d="M16 18v-3"></path><path d="M19 18v-3"></path><path d="M9.5 12h5"></path>
+        </svg>Excel
+      </button>
+      <button id="exportPDF" class="btn btn-ghost" aria-label="Export current report to PDF" title="Export to PDF">
+        <svg xmlns="http://www.w3.org/2000/svg" class="inline h-5 w-5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linejoin="round" stroke-linecap="round"><path d="M8 7h8M8 11h8M8 15h6m2 4H6a2 2 0 0 1-2-2V6c0-1.105.895-2 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2z"></path></svg>PDF
+      </button>
+    </nav>
+  </header>
+
+  <div class="flex flex-1 min-h-0">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-64 border-r border-gray-200 flex flex-col overflow-y-auto h-[calc(100vh-56px)] sticky top-[56px] bg-gray-50">
+      <nav class="flex flex-col flex-grow space-y-1 p-4">
+        <button class="menu-btn flex items-center space-x-3 p-3 rounded-md hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-400 active" data-section="dashboard" aria-current="page">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M3 12h6v8H3zm8-4h6v12h-6zm8-5h-6v17h6z"></path></svg>
+          <span>Dashboard</span>
+        </button>
+        <details class="group">
+          <summary class="menu-btn flex items-center justify-between p-3 rounded-md cursor-pointer hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+            <span class="flex items-center space-x-3 text-indigo-600">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path d="M5.121 17.804A4 4 0 0 1 7 14h10a4 4 0 0 1 3.879 3.804M15 10a3 3 0 1 0-6 0v4h6v-4z"></path>
+              </svg>
+              <span>Entities</span>
+            </span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="rewind-icon h-5 w-5 text-indigo-600 group-open:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linejoin="round" stroke-linecap="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </summary>
+          <nav class="flex flex-col ml-6 mt-2 space-y-1">
+            <button class="menu-btn flex items-center space-x-3 p-2 rounded-md hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-400" data-section="clients">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM12 14a7 7 0 0 0-7 7h14a7 7 0 0 0-7-7z"></path></svg>
+              <span>Clients</span>
+            </button>
+            <button class="menu-btn flex items-center space-x-3 p-2 rounded-md hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-400" data-section="suppliers">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 8c-2.26 0-4 1-4 3v3.5A1.5 1.5 0 0 0 9.5 16h5a1.5 1.5 0 0 0 1.5-1.5V11c0-2-1.74-3-4-3zM4 16v2h16v-2a4 4 0 0 0-8-2.5a4 4 0 0 0-8 2.5z"></path></svg>
+              <span>Suppliers</span>
+            </button>
+          </nav>
+        </details>
+        <details class="group">
+          <summary class="menu-btn flex items-center justify-between p-3 rounded-md cursor-pointer hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+            <span class="flex items-center space-x-3 text-indigo-600">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path d="M20 13V7a4 4 0 0 0-8 0v6"></path><rect x="4" y="9" width="16" height="11" rx="2"></rect>
+              </svg>
+              <span>Operations</span>
+            </span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="rewind-icon h-5 w-5 text-indigo-600 group-open:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linejoin="round" stroke-linecap="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </summary>
+          <nav class="flex flex-col ml-6 mt-2 space-y-1">
+            <button class="menu-btn flex items-center space-x-3 p-2 rounded-md hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-400" data-section="products">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>
+              <span>Products</span>
+            </button>
+            <button class="menu-btn flex items-center space-x-3 p-2 rounded-md hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-400" data-section="purchases">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 11h16M4 15h16M4 19h16"></path></svg>
+              <span>Purchases</span>
+            </button>
+            <button class="menu-btn flex items-center space-x-3 p-2 rounded-md hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-400" data-section="sales">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M20 17l-5-5-5 5"></path><path d="M15 17V9"></path></svg>
+              <span>Sales</span>
+            </button>
+            <!-- New menu items -->
+            <button class="menu-btn flex items-center space-x-3 p-2 rounded-md hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-400" data-section="paymentsReceived">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 8v8m-4-4h8"></path><circle cx="12" cy="12" r="10" stroke-width="2"></circle></svg>
+              <span>Cobros (Payments Received)</span>
+            </button>
+            <button class="menu-btn flex items-center space-x-3 p-2 rounded-md hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-400" data-section="paymentsMade">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path d="M12 16V8m-4 4h8"></path><circle cx="12" cy="12" r="10" stroke-width="2"></circle>
+              </svg>
+              <span>Pagos (Payments Made)</span>
+            </button>
+          </nav>
+        </details>
+        <details class="group">
+          <summary class="menu-btn flex items-center justify-between p-3 rounded-md cursor-pointer hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+            <span class="flex items-center space-x-3 text-indigo-600">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path d="M4 17h16M4 7h16M4 12h16"></path>
+              </svg>
+              <span>Accounting</span>
+            </span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="rewind-icon h-5 w-5 text-indigo-600 group-open:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linejoin="round" stroke-linecap="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </summary>
+          <nav class="flex flex-col ml-6 mt-2 space-y-1">
+            <button class="menu-btn flex items-center space-x-3 p-2 rounded-md hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-400" data-section="journal">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 17v-6h13v6M5 17V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z"></path></svg>
+              <span>Journal</span>
+            </button>
+            <button class="menu-btn flex items-center space-x-3 p-2 rounded-md hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-400" data-section="ledger">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12h6m-6 4h6m-6-8h6"></path></svg>
+              <span>Ledger</span>
+            </button>
+            <button class="menu-btn flex items-center space-x-3 p-2 rounded-md hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-400" data-section="trialBalance">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle></svg>
+              <span>Trial Balance</span>
+            </button>
+            <button class="menu-btn flex items-center space-x-3 p-2 rounded-md hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-400" data-section="financialReports">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path d="M8 7v10M12 7v10m-4-4h8"></path>
+              </svg>
+              <span>Financial Reports</span>
+            </button>
+          </nav>
+        </details>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="mainContent" class="flex-1 overflow-y-auto p-6 max-w-screen-xl mx-auto">
+      <!-- Sections will be shown here -->
+      
+      <!-- Dashboard Section -->
+      <section id="dashboard" class="">
+        <h2 class="text-3xl font-semibold mb-6 select-none">Dashboard</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+          <div class="card">
+            <h3 class="font-semibold text-indigo-600 mb-2">Clients</h3>
+            <p class="text-xl font-semibold" id="countClients">0</p>
+          </div>
+          <div class="card">
+            <h3 class="font-semibold text-indigo-600 mb-2">Suppliers</h3>
+            <p class="text-xl font-semibold" id="countSuppliers">0</p>
+          </div>
+          <div class="card">
+            <h3 class="font-semibold text-indigo-600 mb-2">Products</h3>
+            <p class="text-xl font-semibold" id="countProducts">0</p>
+          </div>
+          <div class="card">
+            <h3 class="font-semibold text-indigo-600 mb-2">Sales</h3>
+            <p class="text-xl font-semibold" id="countSales">0</p>
+          </div>
+          <div class="card">
+            <h3 class="font-semibold text-indigo-600 mb-2">Cobros (Payments Received)</h3>
+            <p class="text-xl font-semibold" id="countPaymentsReceived">0</p>
+          </div>
+          <div class="card">
+            <h3 class="font-semibold text-indigo-600 mb-2">Pagos (Payments Made)</h3>
+            <p class="text-xl font-semibold" id="countPaymentsMade">0</p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Clients Section -->
+      <section id="clients" class="hidden">
+        <h2 class="text-3xl font-semibold mb-6 select-none">Clients</h2>
+        <form id="clientForm" class="mb-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          <input type="text" id="clientName" placeholder="Name" required aria-label="Client Name" />
+          <input type="email" id="clientEmail" placeholder="Email" required aria-label="Client Email" />
+          <input type="text" id="clientPhone" placeholder="Phone" aria-label="Client Phone" />
+          <button type="submit" class="btn btn-primary self-center">Add Client</button>
+        </form>
+        <div class="table-container">
+          <table aria-label="Clients list">
+            <thead>
+              <tr><th>Name</th><th>Email</th><th>Phone</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="clientsTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Suppliers Section -->
+      <section id="suppliers" class="hidden">
+        <h2 class="text-3xl font-semibold mb-6 select-none">Suppliers</h2>
+        <form id="supplierForm" class="mb-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          <input type="text" id="supplierName" placeholder="Name" required aria-label="Supplier Name" />
+          <input type="email" id="supplierEmail" placeholder="Email" required aria-label="Supplier Email" />
+          <input type="text" id="supplierPhone" placeholder="Phone" aria-label="Supplier Phone" />
+          <button type="submit" class="btn btn-primary self-center">Add Supplier</button>
+        </form>
+        <div class="table-container">
+          <table aria-label="Suppliers list">
+            <thead>
+              <tr><th>Name</th><th>Email</th><th>Phone</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="suppliersTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Products Section -->
+      <section id="products" class="hidden">
+        <h2 class="text-3xl font-semibold mb-6 select-none">Products</h2>
+        <form id="productForm" class="mb-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+          <input type="text" id="productName" placeholder="Product Name" required aria-label="Product Name" />
+          <input type="text" id="productCode" placeholder="Code" aria-label="Product Code" />
+          <input type="number" id="productPrice" placeholder="Price" step="0.01" required aria-label="Product Price" min="0" />
+          <input type="number" id="productStock" placeholder="Stock" min="0" aria-label="Product Stock" />
+          <button type="submit" class="btn btn-primary self-center">Add Product</button>
+        </form>
+        <div class="table-container">
+          <table aria-label="Products list">
+            <thead>
+              <tr><th>Name</th><th>Code</th><th>Price</th><th>Stock</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="productsTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Purchases Section -->
+      <section id="purchases" class="hidden">
+        <h2 class="text-3xl font-semibold mb-6 select-none">Purchases</h2>
+        <form id="purchaseForm" class="mb-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-4">
+          <select id="purchaseSupplier" required aria-label="Select Supplier">
+            <option value="" disabled selected>Select Supplier</option>
+          </select>
+          <select id="purchaseProduct" required aria-label="Select Product">
+            <option value="" disabled selected>Select Product</option>
+          </select>
+          <input type="number" id="purchaseQuantity" placeholder="Quantity" min="1" value="1" aria-label="Purchase Quantity" required />
+          <input type="number" id="purchasePrice" placeholder="Price per unit" step="0.01" min="0" aria-label="Purchase Price" required />
+          <input type="date" id="purchaseDate" aria-label="Purchase Date" required />
+          <button type="submit" class="btn btn-primary self-center">Add Purchase</button>
+        </form>
+        <div class="table-container">
+          <table aria-label="Purchases list">
+            <thead>
+              <tr><th>Supplier</th><th>Product</th><th>Quantity</th><th>Price/unit</th><th>Date</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="purchasesTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Sales Section -->
+      <section id="sales" class="hidden">
+        <h2 class="text-3xl font-semibold mb-6 select-none">Sales</h2>
+        <form id="saleForm" class="mb-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-4">
+          <select id="saleClient" required aria-label="Select Client">
+            <option value="" disabled selected>Select Client</option>
+          </select>
+          <select id="saleProduct" required aria-label="Select Product">
+            <option value="" disabled selected>Select Product</option>
+          </select>
+          <input type="number" id="saleQuantity" placeholder="Quantity" min="1" value="1" aria-label="Sale Quantity" required />
+          <input type="number" id="salePrice" placeholder="Price per unit" step="0.01" min="0" aria-label="Sale Price" required />
+          <input type="date" id="saleDate" aria-label="Sale Date" required />
+          <button type="submit" class="btn btn-primary self-center">Add Sale</button>
+        </form>
+        <div class="table-container">
+          <table aria-label="Sales list">
+            <thead>
+              <tr><th>Client</th><th>Product</th><th>Quantity</th><th>Price/unit</th><th>Date</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="salesTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Payments Received (Cobros) Section -->
+      <section id="paymentsReceived" class="hidden">
+        <h2 class="text-3xl font-semibold mb-6 select-none">Cobros (Payments Received)</h2>
+        <form id="paymentReceivedForm" class="mb-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+          <select id="paymentReceivedClient" required aria-label="Select Client">
+            <option value="" disabled selected>Select Client</option>
+          </select>
+          <input type="number" id="paymentReceivedAmount" placeholder="Amount" step="0.01" min="0.01" aria-label="Payment Amount" required />
+          <input type="date" id="paymentReceivedDate" aria-label="Payment Date" required />
+          <input type="text" id="paymentReceivedDescription" placeholder="Description" aria-label="Payment Description" />
+          <button type="submit" class="btn btn-primary self-center">Add Payment Received</button>
+        </form>
+        <div class="table-container">
+          <table aria-label="Payments Received list">
+            <thead>
+              <tr><th>Client</th><th>Amount</th><th>Date</th><th>Description</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="paymentsReceivedTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Payments Made (Pagos) Section -->
+      <section id="paymentsMade" class="hidden">
+        <h2 class="text-3xl font-semibold mb-6 select-none">Pagos (Payments Made)</h2>
+        <form id="paymentMadeForm" class="mb-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+          <select id="paymentMadeSupplier" required aria-label="Select Supplier">
+            <option value="" disabled selected>Select Supplier</option>
+          </select>
+          <input type="number" id="paymentMadeAmount" placeholder="Amount" step="0.01" min="0.01" aria-label="Payment Amount" required />
+          <input type="date" id="paymentMadeDate" aria-label="Payment Date" required />
+          <input type="text" id="paymentMadeDescription" placeholder="Description" aria-label="Payment Description" />
+          <button type="submit" class="btn btn-primary self-center">Add Payment Made</button>
+        </form>
+        <div class="table-container">
+          <table aria-label="Payments Made list">
+            <thead>
+              <tr><th>Supplier</th><th>Amount</th><th>Date</th><th>Description</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="paymentsMadeTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Journal Section -->
+      <section id="journal" class="hidden">
+        <h2 class="text-3xl font-semibold mb-6 select-none">Journal (Libro Diario)</h2>
+        <div class="table-container">
+          <table aria-label="Journal entries">
+            <thead>
+              <tr><th>Date</th><th>Description</th><th>Debit</th><th>Credit</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="journalTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Ledger Section -->
+      <section id="ledger" class="hidden">
+        <h2 class="text-3xl font-semibold mb-6 select-none">Ledger (Libro Mayor)</h2>
+        <div class="table-container">
+          <table aria-label="Ledger entries">
+            <thead>
+              <tr><th>Account</th><th>Date</th><th>Description</th><th>Debit</th><th>Credit</th><th>Balance</th></tr>
+            </thead>
+            <tbody id="ledgerTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Trial Balance Section -->
+      <section id="trialBalance" class="hidden">
+        <h2 class="text-3xl font-semibold mb-6 select-none">Trial Balance (Balance de Comprobación)</h2>
+        <div class="table-container">
+          <table aria-label="Trial balance">
+            <thead>
+              <tr><th>Account</th><th>Debit</th><th>Credit</th></tr>
+            </thead>
+            <tbody id="trialBalanceTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Financial Reports -->
+      <section id="financialReports" class="hidden">
+        <h2 class="text-3xl font-semibold mb-6 select-none">Financial Reports</h2>
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div class="card">
+            <h3 class="font-semibold mb-2">Balance Sheet (Balance General)</h3>
+            <pre id="balanceSheetReport" class="whitespace-pre-wrap text-sm rounded border border-gray-200 p-4 max-h-96 overflow-auto selection:bg-indigo-100"></pre>
+          </div>
+          <div class="card">
+            <h3 class="font-semibold mb-2">Income Statement (Estado de Resultados)</h3>
+            <pre id="incomeStatementReport" class="whitespace-pre-wrap text-sm rounded border border-gray-200 p-4 max-h-96 overflow-auto selection:bg-indigo-100"></pre>
+          </div>
+          <div class="card">
+            <h3 class="font-semibold mb-2">Cash Flow Statement (Flujo de Efectivo)</h3>
+            <pre id="cashFlowReport" class="whitespace-pre-wrap text-sm rounded border border-gray-200 p-4 max-h-96 overflow-auto selection:bg-indigo-100"></pre>
+          </div>
+          <div class="card">
+            <h3 class="font-semibold mb-2">Changes in Equity (Cambios en Patrimonio)</h3>
+            <pre id="equityChangesReport" class="whitespace-pre-wrap text-sm rounded border border-gray-200 p-4 max-h-96 overflow-auto selection:bg-indigo-100"></pre>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+  "use strict";
+
+  // Data keys for localStorage
+  const STORAGE_KEYS = {
+    clients: 'bms_clients',
+    suppliers: 'bms_suppliers',
+    products: 'bms_products',
+    purchases: 'bms_purchases',
+    sales: 'bms_sales',
+    paymentsReceived: 'bms_paymentsReceived', // Cobros
+    paymentsMade: 'bms_paymentsMade',         // Pagos
+    journal: 'bms_journal',
+    ledger: 'bms_ledger',
+  };
+
+  // Current active section
+  let currentSection = 'dashboard';
+
+  // Cached data
+  let clients = [];
+  let suppliers = [];
+  let products = [];
+  let purchases = [];
+  let sales = [];
+  let paymentsReceived = [];
+  let paymentsMade = [];
+  let journalEntries = [];
+  let ledgerEntries = [];
+
+  // DOM references
+  const sections = document.querySelectorAll('main > section');
+  const sidebar = document.getElementById('sidebar');
+  const sidebarToggleBtn = document.getElementById('sidebarToggle');
+  const exportExcelBtn = document.getElementById('exportExcel');
+  const exportPDFBtn = document.getElementById('exportPDF');
+
+  // Initialize application
+  function init() {
+    loadData();
+    setupEventListeners();
+    switchSection(currentSection);
+    updateDashboardCounts();
+    populateSelects();
+    renderAllTables();
+    renderFinancialReports();
+    feather.replace();
+  }
+
+  // Load data from localStorage
+  function loadData() {
+    clients = JSON.parse(localStorage.getItem(STORAGE_KEYS.clients) || '[]');
+    suppliers = JSON.parse(localStorage.getItem(STORAGE_KEYS.suppliers) || '[]');
+    products = JSON.parse(localStorage.getItem(STORAGE_KEYS.products) || '[]');
+    purchases = JSON.parse(localStorage.getItem(STORAGE_KEYS.purchases) || '[]');
+    sales = JSON.parse(localStorage.getItem(STORAGE_KEYS.sales) || '[]');
+    paymentsReceived = JSON.parse(localStorage.getItem(STORAGE_KEYS.paymentsReceived) || '[]');
+    paymentsMade = JSON.parse(localStorage.getItem(STORAGE_KEYS.paymentsMade) || '[]');
+    journalEntries = JSON.parse(localStorage.getItem(STORAGE_KEYS.journal) || '[]');
+    ledgerEntries = JSON.parse(localStorage.getItem(STORAGE_KEYS.ledger) || '[]');
+  }
+
+  // Save data to localStorage
+  function saveData() {
+    localStorage.setItem(STORAGE_KEYS.clients, JSON.stringify(clients));
+    localStorage.setItem(STORAGE_KEYS.suppliers, JSON.stringify(suppliers));
+    localStorage.setItem(STORAGE_KEYS.products, JSON.stringify(products));
+    localStorage.setItem(STORAGE_KEYS.purchases, JSON.stringify(purchases));
+    localStorage.setItem(STORAGE_KEYS.sales, JSON.stringify(sales));
+    localStorage.setItem(STORAGE_KEYS.paymentsReceived, JSON.stringify(paymentsReceived));
+    localStorage.setItem(STORAGE_KEYS.paymentsMade, JSON.stringify(paymentsMade));
+    localStorage.setItem(STORAGE_KEYS.journal, JSON.stringify(journalEntries));
+    localStorage.setItem(STORAGE_KEYS.ledger, JSON.stringify(ledgerEntries));
+  }
+
+  // Setup all event listeners
+  function setupEventListeners() {
+    // Sidebar toggle button
+    sidebarToggleBtn.addEventListener('click', () => sidebar.classList.toggle('collapsed'));
+
+    // Sidebar menu buttons
+    document.querySelectorAll('#sidebar .menu-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const section = btn.dataset.section;
+        if (section) {
+          switchSection(section);
+          // Highlight active menu
+          document.querySelectorAll('#sidebar .menu-btn').forEach(el => el.classList.remove('active'));
+          btn.classList.add('active');
+        }
+      });
+    });
+
+    // Clients form
+    const clientForm = document.getElementById('clientForm');
+    clientForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      addClient();
+    });
+
+    // Suppliers form
+    const supplierForm = document.getElementById('supplierForm');
+    supplierForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      addSupplier();
+    });
+
+    // Products form
+    const productForm = document.getElementById('productForm');
+    productForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      addProduct();
+    });
+
+    // Purchases form
+    const purchaseForm = document.getElementById('purchaseForm');
+    purchaseForm.purchaseDate.value = new Date().toISOString().substr(0,10);
+    purchaseForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      addPurchase();
+    });
+
+    // Sales form
+    const saleForm = document.getElementById('saleForm');
+    saleForm.saleDate.value = new Date().toISOString().substr(0,10);
+    saleForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      addSale();
+    });
+
+    // Payments Received form (Cobros)
+    const paymentReceivedForm = document.getElementById('paymentReceivedForm');
+    paymentReceivedForm.paymentReceivedDate.value = new Date().toISOString().substr(0,10);
+    paymentReceivedForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      addPaymentReceived();
+    });
+
+    // Payments Made form (Pagos)
+    const paymentMadeForm = document.getElementById('paymentMadeForm');
+    paymentMadeForm.paymentMadeDate.value = new Date().toISOString().substr(0,10);
+    paymentMadeForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      addPaymentMade();
+    });
+
+    // Export buttons
+    exportExcelBtn.addEventListener('click', () => {
+      exportCurrentSectionExcel();
+    });
+    exportPDFBtn.addEventListener('click', () => {
+      exportCurrentSectionPDF();
+    });
+  }
+
+  // Switch visible section
+  function switchSection(section) {
+    currentSection = section;
+    sections.forEach(sec => {
+      if (sec.id === section) {
+        sec.classList.remove('hidden');
+      } else {
+        sec.classList.add('hidden');
+      }
+    });
+    renderCurrentSection();
+  }
+
+  // Render all tables and reports after data update
+  function renderAllTables() {
+    renderClientsTable();
+    renderSuppliersTable();
+    renderProductsTable();
+    renderPurchasesTable();
+    renderSalesTable();
+    renderPaymentsReceivedTable();
+    renderPaymentsMadeTable();
+    renderJournalTable();
+    renderLedgerTable();
+    renderTrialBalanceTable();
+  }
+
+  // Render current section content after switch
+  function renderCurrentSection() {
+    switch(currentSection) {
+      case 'dashboard':
+        updateDashboardCounts();
+        break;
+      case 'clients':
+        renderClientsTable();
+        break;
+      case 'suppliers':
+        renderSuppliersTable();
+        break;
+      case 'products':
+        renderProductsTable();
+        break;
+      case 'purchases':
+        renderPurchasesTable();
+        break;
+      case 'sales':
+        renderSalesTable();
+        break;
+      case 'paymentsReceived':
+        renderPaymentsReceivedTable();
+        break;
+      case 'paymentsMade':
+        renderPaymentsMadeTable();
+        break;
+      case 'journal':
+        renderJournalTable();
+        break;
+      case 'ledger':
+        renderLedgerTable();
+        break;
+      case 'trialBalance':
+        renderTrialBalanceTable();
+        break;
+      case 'financialReports':
+        renderFinancialReports();
+        break;
+    }
+  }
+
+  // Populate selects for purchases, sales, cobros, pagos forms
+  function populateSelects() {
+    const purchaseSupplierSelect = document.getElementById('purchaseSupplier');
+    const purchaseProductSelect = document.getElementById('purchaseProduct');
+    const saleClientSelect = document.getElementById('saleClient');
+    const saleProductSelect = document.getElementById('saleProduct');
+    const paymentReceivedClientSelect = document.getElementById('paymentReceivedClient');
+    const paymentMadeSupplierSelect = document.getElementById('paymentMadeSupplier');
+
+    purchaseSupplierSelect.innerHTML = '<option value="" disabled selected>Select Supplier</option>';
+    suppliers.forEach(s => {
+      let opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = s.name;
+      purchaseSupplierSelect.appendChild(opt);
+    });
+
+    purchaseProductSelect.innerHTML = '<option value="" disabled selected>Select Product</option>';
+    products.forEach(p => {
+      let opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.name;
+      purchaseProductSelect.appendChild(opt);
+    });
+
+    saleClientSelect.innerHTML = '<option value="" disabled selected>Select Client</option>';
+    clients.forEach(c => {
+      let opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.name;
+      saleClientSelect.appendChild(opt);
+    });
+
+    saleProductSelect.innerHTML = '<option value="" disabled selected>Select Product</option>';
+    products.forEach(p => {
+      let opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.name;
+      saleProductSelect.appendChild(opt);
+    });
+
+    paymentReceivedClientSelect.innerHTML = '<option value="" disabled selected>Select Client</option>';
+    clients.forEach(c => {
+      let opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.name;
+      paymentReceivedClientSelect.appendChild(opt);
+    });
+
+    paymentMadeSupplierSelect.innerHTML = '<option value="" disabled selected>Select Supplier</option>';
+    suppliers.forEach(s => {
+      let opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = s.name;
+      paymentMadeSupplierSelect.appendChild(opt);
+    });
+  }
+
+  // Generate unique IDs for entities
+  function generateId(prefix) {
+    return prefix + '_' + Math.random().toString(36).substr(2, 9);
+  }
+
+  // Add a client
+  function addClient() {
+    const name = document.getElementById('clientName').value.trim();
+    const email = document.getElementById('clientEmail').value.trim();
+    const phone = document.getElementById('clientPhone').value.trim();
+
+    if (!name || !email) {
+      alert('Name and email are required.');
+      return;
+    }
+    clients.push({id: generateId('cli'), name, email, phone});
+    saveData();
+    populateSelects();
+    renderClientsTable();
+    updateDashboardCounts();
+    document.getElementById('clientForm').reset();
+  }
+
+  // Render clients table
+  function renderClientsTable() {
+    const tbody = document.getElementById('clientsTableBody');
+    tbody.innerHTML = '';
+    clients.forEach((c, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input class="w-full border-0 bg-transparent" value="${c.name}" data-index="${i}" data-field="name" /></td>
+        <td><input class="w-full border-0 bg-transparent" value="${c.email}" data-index="${i}" data-field="email" /></td>
+        <td><input class="w-full border-0 bg-transparent" value="${c.phone}" data-index="${i}" data-field="phone" /></td>
+        <td class="space-x-2">
+          <button class="btn btn-secondary btn-edit" data-index="${i}" aria-label="Save Client"><svg xmlns="http://www.w3.org/2000/svg" class="inline h-5 w-5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linejoin="round" stroke-linecap="round"><path d="M5 13l4 4L19 7"></path></svg>Save</button>
+          <button class="btn btn-ghost btn-delete" data-index="${i}" aria-label="Delete Client"><svg xmlns="http://www.w3.org/2000/svg" class="inline h-5 w-5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linejoin="round" stroke-linecap="round" d="M6 18L18 6M6 6l12 12"></path></svg>Delete</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+    // Add event listeners for edit and delete
+    tbody.querySelectorAll('.btn-edit').forEach(btn => btn.addEventListener('click', () => {
+      const i = btn.dataset.index;
+      saveEditedEntity(clients, 'clients', i, 'clientsTableBody');
+    }));
+    tbody.querySelectorAll('.btn-delete').forEach(btn => btn.addEventListener('click', () => {
+      const i = btn.dataset.index;
+      if(confirm('Delete this client?')) {
+        clients.splice(i, 1);
+        saveData();
+        populateSelects();
+        renderClientsTable();
+        updateDashboardCounts();
+      }
+    }));
+  }
+
+  // Add a supplier
+  function addSupplier() {
+    const name = document.getElementById('supplierName').value.trim();
+    const email = document.getElementById('supplierEmail').value.trim();
+    const phone = document.getElementById('supplierPhone').value.trim();
+
+    if (!name || !email) {
+      alert('Name and email are required.');
+      return;
+    }
+    suppliers.push({id: generateId('sup'), name, email, phone});
+    saveData();
+    populateSelects();
+    renderSuppliersTable();
+    updateDashboardCounts();
+    document.getElementById('supplierForm').reset();
+  }
+
+  // Render suppliers table
+  function renderSuppliersTable() {
+    const tbody = document.getElementById('suppliersTableBody');
+    tbody.innerHTML = '';
+    suppliers.forEach((s, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input class="w-full border-0 bg-transparent" value="${s.name}" data-index="${i}" data-field="name" /></td>
+        <td><input class="w-full border-0 bg-transparent" value="${s.email}" data-index="${i}" data-field="email" /></td>
+        <td><input class="w-full border-0 bg-transparent" value="${s.phone}" data-index="${i}" data-field="phone" /></td>
+        <td class="space-x-2">
+          <button class="btn btn-secondary btn-edit" data-index="${i}" aria-label="Save Supplier"><svg xmlns="http://www.w3.org/2000/svg" class="inline h-5 w-5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linejoin="round" stroke-linecap="round"><path d="M5 13l4 4L19 7"></path></svg>Save</button>
+          <button class="btn btn-ghost btn-delete" data-index="${i}" aria-label="Delete Supplier"><svg xmlns="http://www.w3.org/2000/svg" class="inline h-5 w-5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linejoin="round" stroke-linecap="round" d="M6 18L18 6M6 6l12 12"></path></svg>Delete</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+    // Add event listeners for edit and delete
+    tbody.querySelectorAll('.btn-edit').forEach(btn => btn.addEventListener('click', () => {
+      const i = btn.dataset.index;
+      saveEditedEntity(suppliers, 'suppliers', i, 'suppliersTableBody');
+    }));
+    tbody.querySelectorAll('.btn-delete').forEach(btn => btn.addEventListener('click', () => {
+      const i = btn.dataset.index;
+      if(confirm('Delete this supplier?')) {
+        suppliers.splice(i, 1);
+        saveData();
+        populateSelects();
+        renderSuppliersTable();
+        updateDashboardCounts();
+      }
+    }));
+  }
+
+  // Add product
+  function addProduct() {
+    const name = document.getElementById('productName').value.trim();
+    const code = document.getElementById('productCode').value.trim();
+    const price = parseFloat(document.getElementById('productPrice').value);
+    const stock = parseInt(document.getElementById('productStock').value) || 0;
+
+    if(!name || isNaN(price) || price < 0) {
+      alert('Name and valid (non-negative) price are required.');
+      return;
+    }
+    products.push({id: generateId('prd'), name, code, price, stock});
+    saveData();
+    populateSelects();
+    renderProductsTable();
+    updateDashboardCounts();
+    document.getElementById('productForm').reset();
+  }
+
+  // Render products table
+  function renderProductsTable() {
+    const tbody = document.getElementById('productsTableBody');
+    tbody.innerHTML = '';
+    products.forEach((p, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input class="w-full border-0 bg-transparent" value="${p.name}" data-index="${i}" data-field="name" /></td>
+        <td><input class="w-full border-0 bg-transparent" value="${p.code}" data-index="${i}" data-field="code" /></td>
+        <td><input type="number" class="w-full border-0 bg-transparent" value="${p.price}" step="0.01" min="0" data-index="${i}" data-field="price" /></td>
+        <td><input type="number" class="w-full border-0 bg-transparent" value="${p.stock}" min="0" data-index="${i}" data-field="stock" /></td>
+        <td class="space-x-2">
+          <button class="btn btn-secondary btn-edit" data-index="${i}" aria-label="Save Product"><svg xmlns="http://www.w3.org/2000/svg" class="inline h-5 w-5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linejoin="round" stroke-linecap="round"><path d="M5 13l4 4L19 7"></path></svg>Save</button>
+          <button class="btn btn-ghost btn-delete" data-index="${i}" aria-label="Delete Product"><svg xmlns="http://www.w3.org/2000/svg" class="inline h-5 w-5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linejoin="round" stroke-linecap="round" d="M6 18L18 6M6 6l12 12"></path></svg>Delete</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+    // Add event listeners for edit and delete
+    tbody.querySelectorAll('.btn-edit').forEach(btn => btn.addEventListener('click', () => {
+      const i = btn.dataset.index;
+      saveEditedEntity(products, 'products', i, 'productsTableBody');
+    }));
+    tbody.querySelectorAll('.btn-delete').forEach(btn => btn.addEventListener('click', () => {
+      const i = btn.dataset.index;
+      if(confirm('Delete this product?')) {
+        products.splice(i, 1);
+        saveData();
+        populateSelects();
+        renderProductsTable();
+        updateDashboardCounts();
+      }
+    }));
+  }
+
+  // Add purchase
+  function addPurchase() {
+    const supplierId = document.getElementById('purchaseSupplier').value;
+    const productId = document.getElementById('purchaseProduct').value;
+    const quantity = parseInt(document.getElementById('purchaseQuantity').value);
+    const price = parseFloat(document.getElementById('purchasePrice').value);
+    const date = document.getElementById('purchaseDate').value;
+
+    if(!supplierId || !productId || isNaN(quantity) || isNaN(price) || !date || quantity <= 0 || price < 0) {
+      alert('Please fill all fields correctly.');
+      return;
+    }
+    // Update stock for product on purchase increase
+    const product = products.find(p => p.id === productId);
+    if (product) {
+      product.stock = (product.stock || 0) + quantity;
+    }
+    const purchase = {
+      id: generateId('pur'),
+      supplierId,
+      productId,
+      quantity,
+      price,
+      date
+    };
+    purchases.push(purchase);
+
+    // Create journal entry for purchase invoice (simplified)
+    // Debit Inventory, Credit Accounts Payable
+    addJournalEntry({
+      date,
+      description: `Purchase: ${product.name} from ${getSupplierName(supplierId)}`,
+      debitAccount: 'Inventory',
+      creditAccount: 'Accounts Payable',
+      amount: quantity * price
+    });
+
+    saveData();
+    populateSelects();
+    renderPurchasesTable();
+    renderProductsTable();
+    renderJournalTable();
+    renderLedgerTable();
+    renderTrialBalanceTable();
+    renderFinancialReports();
+    updateDashboardCounts();
+    document.getElementById('purchaseForm').reset();
+  }
+
+  // Render purchases table
+  function renderPurchasesTable() {
+    const tbody = document.getElementById('purchasesTableBody');
+    tbody.innerHTML = '';
+    purchases.forEach((pur, i) => {
+      const supplierName = getSupplierName(pur.supplierId);
+      const productName = getProductName(pur.productId);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${supplierName}</td>
+        <td>${productName}</td>
+        <td>${pur.quantity}</td>
+        <td>${pur.price.toFixed(2)}</td>
+        <td>${pur.date}</td>
+        <td><button class="btn btn-ghost btn-delete" aria-label="Delete Purchase" data-index="${i}">
+          <svg xmlns="http://www.w3.org/2000/svg" class="inline h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linejoin="round" stroke-linecap="round"><path stroke-linejoin="round" stroke-linecap="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+    tbody.querySelectorAll('.btn-delete').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const i = btn.dataset.index;
+        if(confirm('Delete this purchase entry?')) {
+          // On delete, reduce stock accordingly
+          const pur = purchases[i];
+          const product = products.find(p => p.id === pur.productId);
+          if(product) {
+            product.stock = Math.max((product.stock || 0) - pur.quantity, 0);
+          }
+          // Remove purchase and its journal entries referencing this purchase description
+          const desc = `Purchase: ${getProductName(pur.productId)} from ${getSupplierName(pur.supplierId)}`;
+          purchases.splice(i,1);
+          removeJournalEntriesByDescription(desc);
+          saveData();
+          populateSelects();
+          renderPurchasesTable();
+          renderProductsTable();
+          renderJournalTable();
+          renderLedgerTable();
+          renderTrialBalanceTable();
+          renderFinancialReports();
+          updateDashboardCounts();
+        }
+      });
+    });
+  }
+
+  // Add sale
+  function addSale() {
+    const clientId = document.getElementById('saleClient').value;
+    const productId = document.getElementById('saleProduct').value;
+    const quantity = parseInt(document.getElementById('saleQuantity').value);
+    const price = parseFloat(document.getElementById('salePrice').value);
+    const date = document.getElementById('saleDate').value;
+
+    if(!clientId || !productId || isNaN(quantity) || isNaN(price) || !date || quantity <= 0 || price < 0) {
+      alert('Please fill all fields correctly.');
+      return;
+    }
+    // Check stock before sale
+    const product = products.find(p => p.id === productId);
+    if(!product || product.stock < quantity) {
+      alert('Not enough stock for this sale.');
+      return;
+    }
+    product.stock = product.stock - quantity;
+
+    const sale = {
+      id: generateId('sal'),
+      clientId,
+      productId,
+      quantity,
+      price,
+      date
+    };
+    sales.push(sale);
+
+    // Create journal entry for sales invoice (simplified)
+    // Debit Accounts Receivable (client), Credit Sales Revenue
+    addJournalEntry({
+      date,
+      description: `Sale: ${product.name} to ${getClientName(clientId)}`,
+      debitAccount: 'Accounts Receivable',
+      creditAccount: 'Sales Revenue',
+      amount: quantity * price
+    });
+
+    saveData();
+    populateSelects();
+    renderSalesTable();
+    renderProductsTable();
+    renderJournalTable();
+    renderLedgerTable();
+    renderTrialBalanceTable();
+    renderFinancialReports();
+    updateDashboardCounts();
+    document.getElementById('saleForm').reset();
+  }
+
+  // Render sales table
+  function renderSalesTable() {
+    const tbody = document.getElementById('salesTableBody');
+    tbody.innerHTML = '';
+    sales.forEach((sal, i) => {
+      const clientName = getClientName(sal.clientId);
+      const productName = getProductName(sal.productId);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${clientName}</td>
+        <td>${productName}</td>
+        <td>${sal.quantity}</td>
+        <td>${sal.price.toFixed(2)}</td>
+        <td>${sal.date}</td>
+        <td><button class="btn btn-ghost btn-delete" aria-label="Delete Sale" data-index="${i}">
+          <svg xmlns="http://www.w3.org/2000/svg" class="inline h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linejoin="round" stroke-linecap="round"><path stroke-linejoin="round" stroke-linecap="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+    tbody.querySelectorAll('.btn-delete').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const i = btn.dataset.index;
+        if(confirm('Delete this sale entry?')) {
+          // On delete, restore stock accordingly
+          const sal = sales[i];
+          const product = products.find(p => p.id === sal.productId);
+          if(product) {
+            product.stock = (product.stock || 0) + sal.quantity;
+          }
+          // Remove sale and its journal entries referencing this sale description
+          const desc = `Sale: ${getProductName(sal.productId)} to ${getClientName(sal.clientId)}`;
+          sales.splice(i,1);
+          removeJournalEntriesByDescription(desc);
+          saveData();
+          populateSelects();
+          renderSalesTable();
+          renderProductsTable();
+          renderJournalTable();
+          renderLedgerTable();
+          renderTrialBalanceTable();
+          renderFinancialReports();
+          updateDashboardCounts();
+        }
+      });
+    });
+  }
+
+  // Add Payment Received (Cobro)
+  function addPaymentReceived() {
+    const clientId = document.getElementById('paymentReceivedClient').value;
+    const amount = parseFloat(document.getElementById('paymentReceivedAmount').value);
+    const date = document.getElementById('paymentReceivedDate').value;
+    const description = document.getElementById('paymentReceivedDescription').value.trim();
+
+    if(!clientId || isNaN(amount) || amount <= 0 || !date) {
+      alert('Please fill all required fields correctly.');
+      return;
+    }
+
+    const payment = {
+      id: generateId('prv'),
+      clientId,
+      amount,
+      date,
+      description,
+    };
+    paymentsReceived.push(payment);
+
+    // Create journal entry for payment received
+    // Debit Cash, Credit Accounts Receivable (client)
+    addJournalEntry({
+      date,
+      description: description || `Payment Received from ${getClientName(clientId)}`,
+      debitAccount: 'Cash',
+      creditAccount: 'Accounts Receivable',
+      amount
+    });
+
+    saveData();
+    renderPaymentsReceivedTable();
+    renderJournalTable();
+    renderLedgerTable();
+    renderTrialBalanceTable();
+    renderFinancialReports();
+    updateDashboardCounts();
+    document.getElementById('paymentReceivedForm').reset();
+  }
+
+  // Render payments received table
+  function renderPaymentsReceivedTable() {
+    const tbody = document.getElementById('paymentsReceivedTableBody');
+    tbody.innerHTML = '';
+    paymentsReceived.forEach((prv, i) => {
+      const clientName = getClientName(prv.clientId);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${clientName}</td>
+        <td>${prv.amount.toFixed(2)}</td>
+        <td>${prv.date}</td>
+        <td>${prv.description || ''}</td>
+        <td><button class="btn btn-ghost btn-delete" aria-label="Delete Payment Received" data-index="${i}">
+          <svg xmlns="http://www.w3.org/2000/svg" class="inline h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linejoin="round" stroke-linecap="round"><path stroke-linejoin="round" stroke-linecap="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+    tbody.querySelectorAll('.btn-delete').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const i = btn.dataset.index;
+        if(confirm('Delete this payment received entry?')) {
+          // Remove payment and related journal entries by description matching
+          const payment = paymentsReceived[i];
+          const desc1 = payment.description || `Payment Received from ${getClientName(payment.clientId)}`;
+          paymentsReceived.splice(i, 1);
+          removeJournalEntriesByDescription(desc1);
+          saveData();
+          renderPaymentsReceivedTable();
+          renderJournalTable();
+          renderLedgerTable();
+          renderTrialBalanceTable();
+          renderFinancialReports();
+          updateDashboardCounts();
+        }
+      });
+    });
+  }
+
+  // Add Payment Made (Pago)
+  function addPaymentMade() {
+    const supplierId = document.getElementById('paymentMadeSupplier').value;
+    const amount = parseFloat(document.getElementById('paymentMadeAmount').value);
+    const date = document.getElementById('paymentMadeDate').value;
+    const description = document.getElementById('paymentMadeDescription').value.trim();
+
+    if(!supplierId || isNaN(amount) || amount <= 0 || !date) {
+      alert('Please fill all required fields correctly.');
+      return;
+    }
+
+    const payment = {
+      id: generateId('pmd'),
+      supplierId,
+      amount,
+      date,
+      description,
+    };
+    paymentsMade.push(payment);
+
+    // Create journal entry for payment made
+    // Debit Accounts Payable (supplier), Credit Cash
+    addJournalEntry({
+      date,
+      description: description || `Payment Made to ${getSupplierName(supplierId)}`,
+      debitAccount: 'Accounts Payable',
+      creditAccount: 'Cash',
+      amount
+    });
+
+    saveData();
+    renderPaymentsMadeTable();
+    renderJournalTable();
+    renderLedgerTable();
+    renderTrialBalanceTable();
+    renderFinancialReports();
+    updateDashboardCounts();
+    document.getElementById('paymentMadeForm').reset();
+  }
+
+  // Render payments made table
+  function renderPaymentsMadeTable() {
+    const tbody = document.getElementById('paymentsMadeTableBody');
+    tbody.innerHTML = '';
+    paymentsMade.forEach((pmd, i) => {
+      const supplierName = getSupplierName(pmd.supplierId);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${supplierName}</td>
+        <td>${pmd.amount.toFixed(2)}</td>
+        <td>${pmd.date}</td>
+        <td>${pmd.description || ''}</td>
+        <td><button class="btn btn-ghost btn-delete" aria-label="Delete Payment Made" data-index="${i}">
+          <svg xmlns="http://www.w3.org/2000/svg" class="inline h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linejoin="round" stroke-linecap="round"><path stroke-linejoin="round" stroke-linecap="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+    tbody.querySelectorAll('.btn-delete').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const i = btn.dataset.index;
+        if(confirm('Delete this payment made entry?')) {
+          // Remove payment and related journal entries by description matching
+          const payment = paymentsMade[i];
+          const desc1 = payment.description || `Payment Made to ${getSupplierName(payment.supplierId)}`;
+          paymentsMade.splice(i, 1);
+          removeJournalEntriesByDescription(desc1);
+          saveData();
+          renderPaymentsMadeTable();
+          renderJournalTable();
+          renderLedgerTable();
+          renderTrialBalanceTable();
+          renderFinancialReports();
+          updateDashboardCounts();
+        }
+      });
+    });
+  }
+
+
+  // Add journal entry for a purchase or sale or payment
+  function addJournalEntry({date, description, debitAccount, creditAccount, amount}) {
+    // Add journal entry
+    journalEntries.push({
+      id: generateId('jou'),
+      date,
+      description,
+      debitAccount,
+      creditAccount,
+      amount
+    });
+
+    // Update ledger entries accordingly
+    updateLedger(debitAccount, creditAccount, date, description, amount);
+  }
+
+  // Remove journal entries by description (for deletion)
+  function removeJournalEntriesByDescription(description) {
+    journalEntries = journalEntries.filter(entry => entry.description !== description);
+    // Regenerate ledger from journal
+    regenerateLedger();
+  }
+
+  // Update ledger with new journal entry (add debit and credit lines)
+  function updateLedger(debitAccount, creditAccount, date, description, amount) {
+    ledgerEntries.push({
+      id: generateId('led'),
+      account: debitAccount,
+      date,
+      description,
+      debit: amount,
+      credit: 0,
+    });
+    ledgerEntries.push({
+      id: generateId('led'),
+      account: creditAccount,
+      date,
+      description,
+      debit: 0,
+      credit: amount,
+    });
+    // Sort ledger by date ascending
+    ledgerEntries.sort((a,b)=>{
+      if(a.date < b.date) return -1;
+      if(a.date > b.date) return 1;
+      return 0;
+    });
+  }
+
+  // Regenerate ledger entries from journal entries (used after delete)
+  function regenerateLedger() {
+    ledgerEntries = [];
+    journalEntries.forEach(je => {
+      updateLedger(je.debitAccount, je.creditAccount, je.date, je.description, je.amount);
+    });
+    saveData();
+  }
+
+  // Render journal table
+  function renderJournalTable() {
+    const tbody = document.getElementById('journalTableBody');
+    tbody.innerHTML = '';
+    journalEntries.forEach((je, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${je.date}</td><td>${je.description}</td><td>${je.debitAccount} ${formatCurrency(je.amount)}</td><td>${je.creditAccount} ${formatCurrency(je.amount)}</td>
+        <td>
+          <button class="btn btn-ghost btn-delete" aria-label="Delete Journal Entry" data-index="${i}">
+            <svg xmlns="http://www.w3.org/2000/svg" class="inline h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linejoin="round" stroke-linecap="round">
+              <path stroke-linejoin="round" stroke-linecap="round" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+    tbody.querySelectorAll('.btn-delete').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const i = btn.dataset.index;
+        if (confirm('Delete this journal entry? This will also remove related ledger entries.')) {
+          journalEntries.splice(i,1);
+          regenerateLedger();
+          saveData();
+          renderJournalTable();
+          renderLedgerTable();
+          renderTrialBalanceTable();
+          renderFinancialReports();
+        }
+      });
+    });
+  }
+
+  // Render ledger table with running balances
+  function renderLedgerTable() {
+    // Group by account
+    const tbody = document.getElementById('ledgerTableBody');
+    tbody.innerHTML = '';
+    const grouped = {};
+    ledgerEntries.forEach(entry => {
+      if(!grouped[entry.account]) {
+        grouped[entry.account] = [];
+      }
+      grouped[entry.account].push(entry);
+    });
+
+    for(const account in grouped) {
+      let balance = 0;
+      // Account header row
+      const headerRow = document.createElement('tr');
+      headerRow.classList.add('bg-indigo-100', 'font-semibold');
+      headerRow.innerHTML = `<td colspan="6">${account}</td>`;
+      tbody.appendChild(headerRow);
+
+      grouped[account].forEach(e => {
+        balance += (e.debit - e.credit);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td></td>
+          <td>${e.date}</td>
+          <td>${e.description}</td>
+          <td>${formatCurrency(e.debit)}</td>
+          <td>${formatCurrency(e.credit)}</td>
+          <td>${formatCurrency(balance)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+  }
+
+  // Render trial balance table (sum debits and credits by account)
+  function renderTrialBalanceTable() {
+    const tbody = document.getElementById('trialBalanceTableBody');
+    tbody.innerHTML = '';
+
+    const balances = {};
+    ledgerEntries.forEach(e => {
+      if(!balances[e.account]) balances[e.account] = {debit:0, credit:0};
+      balances[e.account].debit += e.debit;
+      balances[e.account].credit += e.credit;
+    });
+
+    let totalDebit = 0;
+    let totalCredit = 0;
+
+    for(const account in balances) {
+      const d = balances[account].debit;
+      const c = balances[account].credit;
+      totalDebit += d;
+      totalCredit += c;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${account}</td><td>${formatCurrency(d)}</td><td>${formatCurrency(c)}</td>
+      `;
+      tbody.appendChild(tr);
+    }
+    // Totals row
+    const totalsRow = document.createElement('tr');
+    totalsRow.classList.add('font-semibold','bg-indigo-100');
+    totalsRow.innerHTML = `
+      <td>Total</td><td>${formatCurrency(totalDebit)}</td><td>${formatCurrency(totalCredit)}</td>
+    `;
+    tbody.appendChild(totalsRow);
+  }
+
+  // Render financial reports (simplified calculations)
+  function renderFinancialReports() {
+    // Balance Sheet: Assets = Liabilities + Equity (simplified)
+    // We map common account names here for demo purposes
+    const accountsBalance = {};
+    ledgerEntries.forEach(e => {
+      if(!accountsBalance[e.account]) accountsBalance[e.account] = 0;
+      accountsBalance[e.account] += e.debit - e.credit;
+    });
+
+    // Define simple categories (hard-coded for demo)
+    const assets = ['Cash', 'Inventory', 'Accounts Receivable'];
+    const liabilities = ['Accounts Payable'];
+    const equity = ['Equity', 'Retained Earnings'];
+
+    // Sum each category
+    const sumCategory = (cats) => cats.reduce((acc, cat) => acc + (accountsBalance[cat] || 0), 0);
+
+    let balanceSheetOutput = '';
+    balanceSheetOutput += `Assets:\n`;
+    assets.forEach(a => {
+      balanceSheetOutput += `  ${a}: ${formatCurrency(accountsBalance[a] || 0)}\n`;
+    });
+    balanceSheetOutput += `Total Assets: ${formatCurrency(sumCategory(assets))}\n\n`;
+
+    balanceSheetOutput += `Liabilities:\n`;
+    liabilities.forEach(l => {
+      balanceSheetOutput += `  ${l}: ${formatCurrency(accountsBalance[l] || 0)}\n`;
+    });
+    balanceSheetOutput += `Total Liabilities: ${formatCurrency(sumCategory(liabilities))}\n\n`;
+
+    balanceSheetOutput += `Equity:\n`;
+    equity.forEach(eq => {
+      balanceSheetOutput += `  ${eq}: ${formatCurrency(accountsBalance[eq] || 0)}\n`;
+    });
+    balanceSheetOutput += `Total Equity: ${formatCurrency(sumCategory(equity))}\n\n`;
+
+    const totalLiabEquity = sumCategory(liabilities) + sumCategory(equity);
+    balanceSheetOutput += `Assets = Liabilities + Equity\n${formatCurrency(sumCategory(assets))} = ${formatCurrency(totalLiabEquity)}\n`;
+
+    document.getElementById('balanceSheetReport').textContent = balanceSheetOutput;
+
+    // Income Statement (Revenue - Expenses)
+    // Simplified: Sales Revenue and Cost of Goods Sold as placeholders
+    const salesRevenue = accountsBalance['Sales Revenue'] || 0;
+    const cogs = accountsBalance['Cost of Goods Sold'] || 0;
+    const incomeStatementOutput = `
+Revenue: ${formatCurrency(salesRevenue)}
+Cost of Goods Sold: ${formatCurrency(cogs)}
+Gross Profit: ${formatCurrency(salesRevenue - cogs)}
+Expenses: (not accounted)
+Net Income: (not accounted)
+`;
+    document.getElementById('incomeStatementReport').textContent = incomeStatementOutput;
+
+    // Cash Flow Statement (simplified)
+    const cashAccount = 'Cash';
+    const cashFlowOutput = `
+Cash at start: (not tracked)
+Cash received from sales & payments: ${formatCurrency(salesRevenue + paymentsReceived.reduce((acc, p) => acc + p.amount, 0))}
+Cash paid for purchases & payments: ${formatCurrency(cogs + paymentsMade.reduce((acc, p) => acc + p.amount, 0))}
+Cash at end: (not calculated)
+`;
+    document.getElementById('cashFlowReport').textContent = cashFlowOutput;
+
+    // Changes in Equity (simplified)
+    const changesEquityOutput = `
+Beginning Equity: (not tracked)
+Plus: Net Income: (not accounted)
+Minus: Dividends: (not accounted)
+Ending Equity: ${formatCurrency(sumCategory(equity))}
+`;
+    document.getElementById('equityChangesReport').textContent = changesEquityOutput;
+  }
+
+  // Format currency for display in USD
+  function formatCurrency(value) {
+    return '$' + Number(value).toFixed(2);
+  }
+
+  // Name finders
+  function getClientName(id) {
+    const c = clients.find(c => c.id === id);
+    return c ? c.name : 'Unknown Client';
+  }
+  function getSupplierName(id) {
+    const s = suppliers.find(s => s.id === id);
+    return s ? s.name : 'Unknown Supplier';
+  }
+  function getProductName(id) {
+    const p = products.find(p => p.id === id);
+    return p ? p.name : 'Unknown Product';
+  }
+
+  // Save edited entity row data
+  function saveEditedEntity(array, storageKey, index, tableBodyId) {
+    const tbody = document.getElementById(tableBodyId);
+    const inputs = tbody.querySelectorAll(`input[data-index="${index}"]`);
+    inputs.forEach(input => {
+      const field = input.dataset.field;
+      let val = input.value;
+      if(field === 'price' || field === 'stock') val = Number(val);
+      array[index][field] = val;
+    });
+    saveData();
+    populateSelects();
+    renderAllTables();
+  }
+
+  // Update dashboard counts
+  function updateDashboardCounts() {
+    document.getElementById('countClients').textContent = clients.length;
+    document.getElementById('countSuppliers').textContent = suppliers.length;
+    document.getElementById('countProducts').textContent = products.length;
+    document.getElementById('countSales').textContent = sales.length;
+    document.getElementById('countPaymentsReceived').textContent = paymentsReceived.length;
+    document.getElementById('countPaymentsMade').textContent = paymentsMade.length;
+  }
+
+  // Export current displayed section to Excel file
+  function exportCurrentSectionExcel() {
+    const section = currentSection;
+    let data = [];
+    let filename = section + '.xlsx';
+    switch(section) {
+      case 'clients':
+        data = clients.map(c => ({Name: c.name, Email: c.email, Phone: c.phone}));
+        break;
+      case 'suppliers':
+        data = suppliers.map(s => ({Name: s.name, Email: s.email, Phone: s.phone}));
+        break;
+      case 'products':
+        data = products.map(p => ({Name: p.name, Code: p.code, Price: p.price, Stock: p.stock}));
+        break;
+      case 'purchases':
+        data = purchases.map(pur => ({
+          Supplier: getSupplierName(pur.supplierId),
+          Product: getProductName(pur.productId),
+          Quantity: pur.quantity,
+          'Price per unit': pur.price,
+          Date: pur.date
+        }));
+        break;
+      case 'sales':
+        data = sales.map(sal => ({
+          Client: getClientName(sal.clientId),
+          Product: getProductName(sal.productId),
+          Quantity: sal.quantity,
+          'Price per unit': sal.price,
+          Date: sal.date
+        }));
+        break;
+      case 'paymentsReceived':
+        data = paymentsReceived.map(pr => ({
+          Client: getClientName(pr.clientId),
+          Amount: pr.amount,
+          Date: pr.date,
+          Description: pr.description || ''
+        }));
+        break;
+      case 'paymentsMade':
+        data = paymentsMade.map(pm => ({
+          Supplier: getSupplierName(pm.supplierId),
+          Amount: pm.amount,
+          Date: pm.date,
+          Description: pm.description || ''
+        }));
+        break;
+      case 'journal':
+        data = journalEntries.map(je => ({
+          Date: je.date,
+          Description: je.description,
+          'Debit Account': je.debitAccount,
+          'Credit Account': je.creditAccount,
+          Amount: je.amount
+        }));
+        break;
+      case 'ledger':
+        data = ledgerEntries.map(le => ({
+          Account: le.account,
+          Date: le.date,
+          Description: le.description,
+          Debit: le.debit,
+          Credit: le.credit
+        }));
+        break;
+      case 'trialBalance':
+        const balances = {};
+        ledgerEntries.forEach(e => {
+          if(!balances[e.account]) balances[e.account] = {debit:0, credit:0};
+          balances[e.account].debit += e.debit;
+          balances[e.account].credit += e.credit;
+        });
+        data = Object.entries(balances).map(([account, val]) => ({
+          Account: account,
+          Debit: val.debit,
+          Credit: val.credit
+        }));
+        break;
+      case 'financialReports':
+        alert('Please export reports manually by selecting the text.');
+        return;
+      case 'dashboard':
+        alert('No export available for dashboard.');
+        return;
+    }
+    if(data.length > 0) {
+      const worksheet = XLSX.utils.json_to_sheet(data);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+      XLSX.writeFile(workbook, filename);
+    } else {
+      alert('No data to export in this section.');
+    }
+  }
+
+  // Export current displayed section table/report to PDF
+  async function exportCurrentSectionPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const section = currentSection;
+    let content = '';
+    switch(section) {
+      case 'clients':
+        content += 'Clients:\n\n';
+        clients.forEach(c => content += `${c.name}, ${c.email}, ${c.phone}\n`);
+        break;
+      case 'suppliers':
+        content += 'Suppliers:\n\n';
+        suppliers.forEach(s => content += `${s.name}, ${s.email}, ${s.phone}\n`);
+        break;
+      case 'products':
+        content += 'Products:\n\n';
+        products.forEach(p => content += `${p.name}, ${p.code}, $${p.price.toFixed(2)}, Stock: ${p.stock}\n`);
+        break;
+      case 'purchases':
+        content += 'Purchases:\n\n';
+        purchases.forEach(pur => content += `${getSupplierName(pur.supplierId)}, ${getProductName(pur.productId)}, Qty: ${pur.quantity}, $${pur.price.toFixed(2)}, Date: ${pur.date}\n`);
+        break;
+      case 'sales':
+        content += 'Sales:\n\n';
+        sales.forEach(sal => content += `${getClientName(sal.clientId)}, ${getProductName(sal.productId)}, Qty: ${sal.quantity}, $${sal.price.toFixed(2)}, Date: ${sal.date}\n`);
+        break;
+      case 'paymentsReceived':
+        content += 'Payments Received:\n\n';
+        paymentsReceived.forEach(pr => content += `${getClientName(pr.clientId)}, $${pr.amount.toFixed(2)}, Date: ${pr.date}, Desc: ${pr.description || ''}\n`);
+        break;
+      case 'paymentsMade':
+        content += 'Payments Made:\n\n';
+        paymentsMade.forEach(pm => content += `${getSupplierName(pm.supplierId)}, $${pm.amount.toFixed(2)}, Date: ${pm.date}, Desc: ${pm.description || ''}\n`);
+        break;
+      case 'journal':
+        content += 'Journal Entries:\n\n';
+        journalEntries.forEach(je => content += `${je.date}, ${je.description}, Debit: ${je.debitAccount} $${je.amount.toFixed(2)}, Credit: ${je.creditAccount} $${je.amount.toFixed(2)}\n`);
+        break;
+      case 'ledger':
+        content += 'Ledger Entries:\n\n';
+        ledgerEntries.forEach(le => content += `${le.account}, ${le.date}, ${le.description}, Debit: $${le.debit.toFixed(2)}, Credit: $${le.credit.toFixed(2)}\n`);
+        break;
+      case 'trialBalance':
+        content += 'Trial Balance:\n\n';
+        const balances = {};
+        ledgerEntries.forEach(e => {
+          if(!balances[e.account]) balances[e.account] = {debit:0, credit:0};
+          balances[e.account].debit += e.debit;
+          balances[e.account].credit += e.credit;
+        });
+        for(const acc in balances){
+          content += `${acc}: Debit $${balances[acc].debit.toFixed(2)}, Credit $${balances[acc].credit.toFixed(2)}\n`;
+        }
+        break;
+      case 'financialReports':
+        content += 'Financial Reports:\n\n';
+        content += document.getElementById('balanceSheetReport').textContent + '\n\n';
+        content += document.getElementById('incomeStatementReport').textContent + '\n\n';
+        content += document.getElementById('cashFlowReport').textContent + '\n\n';
+        content += document.getElementById('equityChangesReport').textContent + '\n\n';
+        break;
+      case 'dashboard':
+        alert('No export available for dashboard.');
+        return;
+    }
+    doc.setFontSize(12);
+    doc.text(content, 10, 10);
+    doc.save(section + '.pdf');
+  }
+
+
+  // Initialize app
+  document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
+
